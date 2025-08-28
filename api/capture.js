@@ -124,18 +124,48 @@ module.exports = async (req, res) => {
             throw new Error('Variáveis de ambiente TELEGRAM_BOT_TOKEN ou TELEGRAM_CHAT_ID não configuradas')
         }
 
-        console.log('Enviando para Telegram...')
-        await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
-            chat_id: chatId,
-            text: message,
-            parse_mode: 'Markdown',
-            disable_web_page_preview: false
-        })
+        // Check message length and split if too long (Telegram limit: 4096 characters)
+        const MAX_MESSAGE_LENGTH = 4096;
+        const sendMessage = async (text) => {
+            await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
+                chat_id: chatId,
+                text: text,
+                parse_mode: 'Markdown',
+                disable_web_page_preview: true
+            })
+        }
+
+        if (message.length > MAX_MESSAGE_LENGTH) {
+            // Split message into parts
+            const parts = [];
+            let currentPart = "";
+            const lines = message.split('\n');
+            for (const line of lines) {
+                if (currentPart.length + line.length + 1 > MAX_MESSAGE_LENGTH) {
+                    parts.push(currentPart);
+                    currentPart = line + '\n';
+                } else {
+                    currentPart += line + '\n';
+                }
+            }
+            if (currentPart.length > 0) {
+                parts.push(currentPart);
+            }
+            // Send each part
+            for (let i = 0; i < parts.length; i++) {
+                await sendMessage(parts[i]);
+            }
+        } else {
+            await sendMessage(message);
+        }
 
         console.log('Mensagem enviada com sucesso para Telegram')
         res.status(200).json({ success: true, message: 'Dados enviados' })
     } catch (error) {
         console.error('❌ Erro em capture.js:', error.message)
+        if (error.response) {
+            console.error('Resposta do Telegram:', error.response.data)
+        }
         res.status(500).json({ error: error.message })
     }
 }
